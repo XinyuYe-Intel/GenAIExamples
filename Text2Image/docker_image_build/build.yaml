@@ -26,3 +26,9 @@ services:
       dockerfile: ./docker/Dockerfile
     extends: text2image
     image: ${REGISTRY:-opea}/text2image-ui:${TAG:-latest}
+  nginx:
+    build:
+      context: GenAIComps
+      dockerfile: comps/nginx/Dockerfile
+    extends: text2image
+    image: ${REGISTRY:-opea}/nginx:${TAG:-latest}    

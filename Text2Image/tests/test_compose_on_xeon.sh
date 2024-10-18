@@ -18,16 +18,22 @@ MODEL=stabilityai/stable-diffusion-2-1
 function build_docker_images() {
     cd $WORKPATH/docker_image_build
     if [ ! -d "GenAIComps" ] ; then
-        git clone https://github.com/opea-project/GenAIComps.git
+        git clone https://github.com/opea-project/GenAIComps.git && cd GenAIComps && git checkout "${opea_branch:-"main"}" && cd ../
     fi
     docker compose -f build.yaml build --no-cache > ${LOG_PATH}/docker_image_build.log
+
+    docker images && sleep 1s
 }
 
 function start_service() {
-    export no_proxy="localhost,127.0.0.1,"${ip_address}
-    docker run -d --name="text2image-server" -p $text2image_service_port:$text2image_service_port --runtime=runc --ipc=host -e http_proxy=$http_proxy -e https_proxy=$https_proxy -e MODEL=$MODEL -e no_proxy=$no_proxy ${IMAGE_REPO}/text2image:${IMAGE_TAG}
+    cd $WORKPATH/docker_compose/intel/cpu/xeon
+    
+    export MODEL=${MODEL}
+    export HUGGINGFACEHUB_API_TOKEN=${HUGGINGFACEHUB_API_TOKEN}
 
-    sed -i "s/backend_address/$ip_address/g" $WORKPATH/ui/svelte/.env
+    # Start Docker Containers
+    docker compose -f compose.yaml up -d > ${LOG_PATH}/start_services_with_compose.log
+
     sleep 30s
 }
 
@@ -91,8 +97,8 @@ function validate_frontend() {
 }
 
 function stop_docker() {
-    cid=$(docker ps -aq --filter "name=text2image-server*")
-    if [[ ! -z "$cid" ]]; then docker stop $cid && docker rm $cid && sleep 1s; fi
+    cd $WORKPATH/docker_compose/intel/cpu/xeon
+    docker compose stop && docker compose rm -f
 }
 
 function main() {
